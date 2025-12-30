@@ -1,6 +1,7 @@
 {
   "name": "frontend-angular",
   "version": "0.0.0",
+  "author": "Devansh V Purohit",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

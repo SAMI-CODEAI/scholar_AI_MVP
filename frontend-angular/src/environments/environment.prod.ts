@@ -1,14 +1,13 @@
 export const environment = {
     production: true,
-    // Firebase Configuration - Replace with your Firebase project config
     firebase: {
-        apiKey: 'YOUR_API_KEY',
-        authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-        projectId: 'YOUR_PROJECT_ID',
-        storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-        messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-        appId: 'YOUR_APP_ID'
+        apiKey: "AIzaSyDb7ny0NMBmrA0Sv_SDHwifRlOz1_rOy9g",
+        authDomain: "medkey-vault.firebaseapp.com",
+        projectId: "medkey-vault",
+        storageBucket: "medkey-vault.firebasestorage.app",
+        messagingSenderId: "978355602312",
+        appId: "1:978355602312:web:25ef0c5ab1119f5018b03d",
+        measurementId: "G-FT4JKRFFWG"
     },
-    // Backend API URL - Cloud Run production URL
-    apiUrl: 'https://YOUR_CLOUD_RUN_URL/api'
+    apiUrl: '/api'
 };

@@ -47,9 +47,11 @@ if not firebase_admin._apps:
     else:
         # Check if running in a cloud environment where default creds work
         try:
-            firebase_admin.initialize_app()
-        except:
-            logger.warning("Firebase Admin not initialized. Auth features will fail.")
+            # Explicitly set project ID for local development with user credentials
+            firebase_admin.initialize_app(options={'projectId': 'medkey-vault'})
+            logger.info("Initialized Firebase Admin with project: medkey-vault")
+        except Exception as e:
+            logger.warning(f"Firebase Admin init failed: {e}")
 
 # Configure Gemini API
 USER_GEMINI_API_KEY = "AIzaSyC0BgST84n0YqkSHPR6FfURsv_MYimVNLA"
@@ -271,10 +273,11 @@ def list_available_models():
 
 @app.route('/api/upload', methods=['POST'])
 def handle_upload():
-    # Verify Auth (Optional for demo, recommended for real usage)
-    # user, error = verify_firebase_token(request)
-    # user_id = user.get('uid') if user else 'anonymous'
-    user_id = 'demo_user' 
+    # Verify Auth
+    user, error = verify_firebase_token(request)
+    if not user:
+        return jsonify({"error": f"Unauthorized: {error}"}), 401
+    user_id = user['uid'] 
     
     # Configure Gemini with user provided key
     if not configure_genai(request):
@@ -350,9 +353,10 @@ def handle_upload():
 
 @app.route('/api/guides', methods=['GET'])
 def get_all_guides():
-    # user, error = verify_firebase_token(request)
-    # user_id = user.get('uid') if user else 'anonymous'
-    user_id = 'demo_user'
+    user, error = verify_firebase_token(request)
+    if not user:
+        return jsonify({"error": f"Unauthorized: {error}"}), 401
+    user_id = user['uid']
 
     try:
         guides = []

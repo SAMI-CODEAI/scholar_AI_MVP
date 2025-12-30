@@ -21,6 +21,14 @@ export class LoginComponent {
     loading = false;
     error = '';
 
+    ngOnInit() {
+        this.authService.user$.subscribe(user => {
+            if (user) {
+                this.router.navigate(['/home']);
+            }
+        });
+    }
+
     async onSubmit() {
         this.loading = true;
         this.error = '';
@@ -31,9 +39,16 @@ export class LoginComponent {
             } else {
                 await this.authService.signInWithEmail(this.email, this.password);
             }
-            this.router.navigate(['/']);
+            this.router.navigate(['/home']);
         } catch (err: any) {
-            this.error = err.message || 'Authentication failed';
+            console.error(err);
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                this.error = 'Invalid email or password.';
+            } else if (err.code === 'auth/email-already-in-use') {
+                this.error = 'Email is already in use.';
+            } else {
+                this.error = err.message || 'Authentication failed';
+            }
         } finally {
             this.loading = false;
         }
@@ -45,8 +60,9 @@ export class LoginComponent {
 
         try {
             await this.authService.signInWithGoogle();
-            this.router.navigate(['/']);
+            this.router.navigate(['/home']);
         } catch (err: any) {
+            console.error(err);
             this.error = err.message || 'Google sign-in failed';
         } finally {
             this.loading = false;

@@ -6,21 +6,26 @@ import { GuideComponent } from './components/guide/guide.component';
 export const routes: Routes = [
     {
         path: '',
+        redirectTo: 'login',
+        pathMatch: 'full'
+    },
+    {
+        path: 'home',
         component: HomeComponent,
-        title: 'AI Learning Assistant - Home'
+        title: 'Scholar AI - Home'
     },
     {
         path: 'login',
         component: LoginComponent,
-        title: 'AI Learning Assistant - Login'
+        title: 'Scholar AI - Login'
     },
     {
         path: 'guide/:id',
         component: GuideComponent,
-        title: 'AI Learning Assistant - Study Guide'
+        title: 'Scholar AI - Study Guide'
     },
     {
         path: '**',
-        redirectTo: ''
+        redirectTo: 'login'
     }
 ];

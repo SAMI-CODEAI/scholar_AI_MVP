@@ -16,7 +16,7 @@ A full-stack AI-powered study tool that transforms various content formats into 
 ## 📁 Project Structure
 
 ```
-CodeRave_Refactored/
+Scholar-AI/
 ├── frontend-angular/           # Angular SPA
 │   ├── src/
 │   │   ├── app/
@@ -57,7 +57,7 @@ CodeRave_Refactored/
 
 ```bash
 git clone <repository-url>
-cd CodeRave_Refactored
+cd Scholar-AI
 ```
 
 ### 2. Configure Firebase
@@ -293,8 +293,10 @@ This project is licensed under the MIT License.
 ---
 
 ## 🙏 Acknowledgments
-
-- Original CodeRave 2024 hackathon submission
+- Developed by **Devansh V Purohit**
 - Google Gemini for AI capabilities
 - Firebase for authentication and hosting
 - Angular team for the framework
+
+---
+```
