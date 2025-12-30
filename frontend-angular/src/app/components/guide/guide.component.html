@@ -1,0 +1,243 @@
+<div class="guide-container">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <a routerLink="/" class="back-link">
+                <span>←</span> Back
+            </a>
+        </div>
+        <div class="nav-brand">
+            <span class="logo-icon">🎓</span>
+            <span class="logo-text">Scholar AI</span>
+        </div>
+        <div class="nav-actions">
+            @if (user$ | async; as user) {
+            <button class="btn-secondary" (click)="signOut()">Sign Out</button>
+            }
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Loading State -->
+        @if (loading) {
+        <div class="loading-state">
+            <div class="spinner-large"></div>
+            <p>Loading study guide...</p>
+        </div>
+        }
+
+        <!-- Error State -->
+        @if (error && !loading) {
+        <div class="error-state">
+            <span class="error-icon">⚠️</span>
+            <h2>Oops!</h2>
+            <p>{{ error }}</p>
+            <a routerLink="/" class="btn-primary">Go Home</a>
+        </div>
+        }
+
+        <!-- Guide Content -->
+        @if (guide && !loading) {
+        <div class="guide-content">
+            <!-- Header -->
+            <div class="guide-header">
+                <h1 class="guide-title">{{ guide.title }}</h1>
+                <div class="guide-actions">
+                    <button class="btn-icon" (click)="copyShareLink()" title="Share">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                            <polyline points="16 6 12 2 8 6" />
+                            <line x1="12" y1="2" x2="12" y2="15" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab" [class.active]="activeTab === 'summary'" (click)="setActiveTab('summary')">
+                    📝 Summary
+                </button>
+                <button class="tab" [class.active]="activeTab === 'flashcards'" (click)="setActiveTab('flashcards')">
+                    🃏 Flashcards
+                </button>
+                <button class="tab" [class.active]="activeTab === 'quiz'" (click)="setActiveTab('quiz')">
+                    ❓ Quiz
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                <!-- Summary Tab -->
+                @if (activeTab === 'summary') {
+                <div class="summary-section">
+                    <div class="section-header">
+                        <h2>Summary</h2>
+                        <button class="btn-export" (click)="exportSummary()">
+                            📥 Export DOCX
+                        </button>
+                    </div>
+                    <div class="summary-content markdown">
+                        {{ guide.summary }}
+                    </div>
+                </div>
+                }
+
+                <!-- Flashcards Tab -->
+                @if (activeTab === 'flashcards') {
+                <div class="flashcards-section">
+                    <div class="section-header">
+                        <h2>Flashcards</h2>
+                        <button class="btn-export" (click)="exportFlashcards()">
+                            📥 Export DOCX
+                        </button>
+                    </div>
+
+                    @if (guide.flash_cards.length > 0) {
+                    <div class="flashcard-container">
+                        <div class="flashcard" [class.flipped]="isFlipped" (click)="flipCard()">
+                            <div class="flashcard-inner">
+                                <div class="flashcard-front">
+                                    <span class="card-label">Question</span>
+                                    <p>{{ guide.flash_cards[currentCardIndex][0] }}</p>
+                                    <span class="flip-hint">Click to flip</span>
+                                </div>
+                                <div class="flashcard-back">
+                                    <span class="card-label">Answer</span>
+                                    <p>{{ guide.flash_cards[currentCardIndex][1] }}</p>
+                                    <span class="flip-hint">Click to flip back</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flashcard-nav">
+                            <button class="btn-nav" (click)="prevCard()" [disabled]="currentCardIndex === 0">
+                                ← Previous
+                            </button>
+                            <span class="card-counter">
+                                {{ currentCardIndex + 1 }} / {{ guide.flash_cards.length }}
+                            </span>
+                            <button class="btn-nav" (click)="nextCard()"
+                                [disabled]="currentCardIndex === guide.flash_cards.length - 1">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                    }
+                </div>
+                }
+
+                <!-- Quiz Tab -->
+                @if (activeTab === 'quiz') {
+                <div class="quiz-section">
+                    <div class="section-header">
+                        <h2>Quiz</h2>
+                        <button class="btn-export" (click)="exportQuiz()">
+                            📥 Export DOCX
+                        </button>
+                    </div>
+
+                    @if (!quizStarted) {
+                    <div class="quiz-intro">
+                        <div class="quiz-info">
+                            <span class="quiz-icon">📋</span>
+                            <h3>Ready to test your knowledge?</h3>
+                            <p>This quiz contains {{ guide.quiz.length }} questions.</p>
+                        </div>
+                        <button class="btn-primary" (click)="startQuiz()">
+                            Start Quiz
+                        </button>
+                    </div>
+                    }
+
+                    @if (quizStarted && !quizCompleted) {
+                    <div class="quiz-question">
+                        <div class="question-header">
+                            <span class="question-number">
+                                Question {{ currentQuestionIndex + 1 }} of {{ guide.quiz.length }}
+                            </span>
+                            <div class="progress-dots">
+                                @for (q of guide.quiz; track $index) {
+                                <span class="dot" [class.answered]="quizAnswers[$index] !== null"
+                                    [class.current]="$index === currentQuestionIndex"></span>
+                                }
+                            </div>
+                        </div>
+
+                        <p class="question-text">{{ guide.quiz[currentQuestionIndex].question }}</p>
+
+                        <div class="answers">
+                            @for (answer of guide.quiz[currentQuestionIndex].possible_answers; track $index) {
+                            <button class="answer-btn" [class.selected]="selectedAnswer === $index"
+                                (click)="selectAnswer($index)">
+                                <span class="answer-letter">{{ ['A', 'B', 'C', 'D'][$index] }}</span>
+                                {{ answer }}
+                            </button>
+                            }
+                        </div>
+
+                        <div class="quiz-nav">
+                            <button class="btn-nav" (click)="prevQuestion()" [disabled]="currentQuestionIndex === 0">
+                                ← Previous
+                            </button>
+
+                            @if (currentQuestionIndex < guide.quiz.length - 1) { <button class="btn-primary"
+                                (click)="nextQuestion()">
+                                Next Question
+                                </button>
+                                } @else {
+                                <button class="btn-primary btn-submit" (click)="submitQuiz()"
+                                    [disabled]="quizAnswers.includes(null)">
+                                    Submit Quiz
+                                </button>
+                                }
+                        </div>
+                    </div>
+                    }
+
+                    @if (quizCompleted) {
+                    <div class="quiz-results">
+                        <div class="results-header">
+                            <span class="results-icon">{{ getQuizPercentage() >= 70 ? '🎉' : '📚' }}</span>
+                            <h3>Quiz Complete!</h3>
+                            <p class="score">
+                                You scored <strong>{{ quizScore }}</strong> out of <strong>{{ guide.quiz.length
+                                    }}</strong>
+                            </p>
+                            <div class="score-bar">
+                                <div class="score-fill" [style.width.%]="getQuizPercentage()"></div>
+                            </div>
+                            <p class="percentage">{{ getQuizPercentage() }}%</p>
+                        </div>
+
+                        <div class="results-list">
+                            @for (question of guide.quiz; track $index) {
+                            <div class="result-item" [class.correct]="isAnswerCorrect($index)">
+                                <span class="result-icon">{{ isAnswerCorrect($index) ? '✓' : '✗' }}</span>
+                                <div class="result-content">
+                                    <p class="result-question">{{ question.question }}</p>
+                                    <p class="result-answer">
+                                        Your answer: {{ question.possible_answers[quizAnswers[$index] || 0] }}
+                                        @if (!isAnswerCorrect($index)) {
+                                        <br /><span class="correct-answer">
+                                            Correct: {{ question.possible_answers[question.index] }}
+                                        </span>
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                            }
+                        </div>
+
+                        <button class="btn-primary" (click)="resetQuiz()">
+                            Try Again
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </main>
+</div>

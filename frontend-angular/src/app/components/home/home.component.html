@@ -1,0 +1,149 @@
+<div class="home-container">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo-icon">🎓</span>
+            <span class="logo-text">Scholar AI</span>
+        </div>
+        <div class="nav-actions">
+            @if (user$ | async; as user) {
+            <span class="user-email">{{ user.email }}</span>
+            <button class="btn-secondary" (click)="signOut()">Sign Out</button>
+            } @else {
+            <a routerLink="/login" class="btn-secondary">Sign In</a>
+            }
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="main-content">
+        <div class="hero-section">
+            <h1 class="hero-title">
+                <span class="gradient-text">Scholar</span> AI
+            </h1>
+            <p class="hero-subtitle">
+                Upload any content and let AI create personalized study materials for you.
+            </p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="upload-dropzone" [class.dragging]="isDragging" [class.has-file]="selectedFile"
+                (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
+                (click)="fileInput.click()">
+                <input type="file" #fileInput (change)="onFileSelect($event)"
+                    accept=".pdf,.docx,.doc,.txt,.md,.html,.mp3,.mp4,.wav" style="display: none" />
+
+                @if (!selectedFile && !isUploading) {
+                <div class="dropzone-content">
+                    <div class="upload-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <p class="dropzone-text">Drag & drop your file here</p>
+                    <p class="dropzone-subtext">or click to browse</p>
+                    <div class="supported-formats">
+                        @for (format of supportedFormats; track format) {
+                        <span class="format-badge">{{ format }}</span>
+                        }
+                    </div>
+                </div>
+                }
+
+                @if (selectedFile && !isUploading) {
+                <div class="file-preview" (click)="$event.stopPropagation()">
+                    <span class="file-icon">{{ getFileIcon(selectedFile.name) }}</span>
+                    <div class="file-info">
+                        <p class="file-name">{{ selectedFile.name }}</p>
+                        <p class="file-size">{{ formatFileSize(selectedFile.size) }}</p>
+                    </div>
+                    <button class="btn-remove" (click)="removeFile(); $event.stopPropagation()">
+                        ✕
+                    </button>
+                </div>
+                }
+
+                @if (isUploading) {
+                <div class="upload-progress" (click)="$event.stopPropagation()">
+                    <div class="progress-icon">
+                        <div class="spinner-large"></div>
+                    </div>
+                    <p class="progress-text">Processing your file...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+                    </div>
+                    <p class="progress-percent">{{ uploadProgress | number:'1.0-0' }}%</p>
+                </div>
+                }
+            </div>
+
+            @if (uploadError) {
+            <div class="error-message">
+                <span>⚠️</span> {{ uploadError }}
+            </div>
+            }
+
+            @if (selectedFile && !isUploading) {
+            <div class="api-key-section">
+                <label for="apiKey">Gemini API Key (Optional)</label>
+                <input type="password" id="apiKey" [(ngModel)]="apiKey" placeholder="Paste your Gemini API Key here"
+                    class="api-key-input">
+                <p class="api-info">Leave blank if using backend configured key</p>
+            </div>
+
+            <button class="btn-primary btn-upload" (click)="uploadFile()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12l5 5L20 7" />
+                </svg>
+                Generate Study Guide
+            </button>
+            }
+        </div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+            <div class="feature-card">
+                <div class="feature-icon">📤</div>
+                <h3>Upload File</h3>
+                <p>Upload a video, audio, PDF, or document to get started</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Processing</h3>
+                <p>Our AI creates personalized summaries, flashcards, and quizzes</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Study & Share</h3>
+                <p>Study with interactive materials or share via link</p>
+            </div>
+        </div>
+
+        <!-- Recent Guides Section -->
+        @if (recentGuides.length > 0) {
+        <div class="recent-section">
+            <h2 class="section-title">Recent Study Guides</h2>
+            <div class="guides-grid">
+                @for (guide of recentGuides; track guide.id) {
+                <a [routerLink]="['/guide', guide.id]" class="guide-card">
+                    <span class="guide-icon">{{ getFileIcon(guide.filename || '') }}</span>
+                    <div class="guide-info">
+                        <h4>{{ guide.title }}</h4>
+                        <p>{{ guide.filename }}</p>
+                    </div>
+                    <span class="guide-arrow">→</span>
+                </a>
+                }
+            </div>
+        </div>
+        }
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Built with ❤️ using Angular + Firebase + Google Cloud</p>
+    </footer>
+</div>
