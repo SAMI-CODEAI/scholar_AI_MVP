@@ -1,0 +1,33 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "frontend-angular/package.json",
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist/frontend-angular/browser"
+            }
+        },
+        {
+            "src": "backend-functions/main.py",
+            "use": "@vercel/python"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "/backend-functions/main.py"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/frontend-angular/$1"
+        },
+        {
+            "handle": "filesystem"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/index.html"
+        }
+    ]
+}

@@ -195,57 +195,43 @@ def get_audio_transcript(file_path):
 # GEMINI PROMPTS (Updated to gemini-1.5-flash)
 # ============================================================================
 
-def prompt_flashcards(prompt):
-    """Generate flashcards from transcript using Gemini"""
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
-    response = model.generate_content(
-        "Given the following transcript, make 10 flashcards. Return these in JSON format. "
-        "It should be a list of lists, where each sublist is two elements where the first "
-        "element is the question, and the second is the answer. "
-        "Transcript: " + prompt
-    )
-    return clean_json_response(response.text)
-
-def prompt_quiz(prompt):
-    """Generate quiz from transcript using Gemini"""
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
-    response = model.generate_content(
-        "Given the following transcript, I want you to generate a quiz with 10 questions. "
-        "The quiz should be in JSON format. It should be a list of JSON objects. Each JSON "
-        "object should have three fields: 'question', 'possible_answers' (a list of 4 strings), "
-        "and 'index' (integer 0-3 indicating correct answer). "
-        "Transcript: " + prompt
-    )
-    return clean_json_response(response.text)
-
-def prompt_summary(prompt):
-    """Generate summary from transcript using Gemini"""
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
-    response = model.generate_content(
-        "Given the following transcript, give a thorough summary of the main parts. "
-        "Be as detailed as possible. Have a few main points which are bolded, and a lot "
-        "of sub-points. Use markdown formatting. "
-        "Transcript: " + prompt
-    )
-    return response.text
-
-def prompt_title(prompt):
-    """Generate title from transcript using Gemini"""
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
-    response = model.generate_content(
-        "Give me a title for this transcript. Should not be very long. "
-        "Say nothing else except the title: " + prompt
-    )
-    return response.text.strip()
-
 def prompt_everything(prompt):
-    """Run all generations in parallel (conceptually)"""
-    return {
-        "title": prompt_title(prompt[:1000]), # Use start for title
-        "summary": prompt_summary(prompt),
-        "flash_cards": prompt_flashcards(prompt),
-        "quiz": prompt_quiz(prompt)
-    }
+    """Generate EVERYTHING in a single Gemini call to save time (crucial for Vercel timeout)"""
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    
+    final_prompt = (
+        "You are an expert study assistant. I need you to generate a study guide based on the transcript provided below. "
+        "Return the output as a SINGLE VALID JSON object with the following structure:\n"
+        "{\n"
+        "  \"title\": \"A short, catchy title\",\n"
+        "  \"summary\": \"A detailed summary with markdown formatting (bolding key points)\",\n"
+        "  \"flash_cards\": [[\"Question 1\", \"Answer 1\"], [\"Question 2\", \"Answer 2\"], ...], (10 cards)\n"
+        "  \"quiz\": [\n"
+        "    {\"question\": \"Q1\", \"possible_answers\": [\"A\",\"B\",\"C\",\"D\"], \"index\": 0},\n"
+        "    ... (10 questions)\n"
+        "  ]\n"
+        "}\n\n"
+        "Transcript:\n" + prompt
+    )
+    
+    try:
+        response = model.generate_content(final_prompt, generation_config={"response_mime_type": "application/json"})
+        return json.loads(response.text)
+    except Exception as e:
+        logger.error(f"Gemini Generation Error: {e}")
+        # Fallback to empty structure if parsing fails
+        return {
+            "title": "Error Generating Guide",
+            "summary": "The AI could not process this text within the time limit or format constraints.",
+            "flash_cards": [],
+            "quiz": []
+        }
+
+# Deprecated individual prompt functions removed for performance
+# def prompt_flashcards...
+# def prompt_quiz...
+# def prompt_summary...
+# def prompt_title...
 
 def clean_json_response(text):
     """Clean markdown code blocks from JSON response"""
