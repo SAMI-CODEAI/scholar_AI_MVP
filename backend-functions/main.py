@@ -197,7 +197,7 @@ def get_audio_transcript(file_path):
 
 def prompt_everything(prompt):
     """Generate EVERYTHING in a single Gemini call to save time (crucial for Vercel timeout)"""
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     final_prompt = (
         "You are an expert study assistant. I need you to generate a study guide based on the transcript provided below. "
