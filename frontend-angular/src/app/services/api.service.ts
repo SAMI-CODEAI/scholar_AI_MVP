@@ -24,16 +24,23 @@ export interface StudyGuide {
     summary: string;
     flash_cards: string[][];
     quiz: QuizQuestion[];
+    study_tips?: string[];
+    topics?: { name: string; difficulty: string }[];
+    plan_explanation?: string;
     study_schedule?: {
         day_offset: number;
         title: string;
         details: string;
         duration_minutes: number;
         completed?: boolean;
+        type?: string;
+        difficulty?: string;
     }[];
     created_at: number;
     filename?: string;
 }
+
+
 
 export interface UploadResponse {
     id: string;
@@ -127,10 +134,10 @@ export class ApiService {
         );
     }
 
-    replanSchedule(guideId: string): Observable<any[]> {
+    replanSchedule(guideId: string, missedReason: string = ''): Observable<any> {
         return this.getAuthHeaders().pipe(
             switchMap(headers => {
-                return this.http.post<any[]>(`${this.apiUrl}/guide/${guideId}/replan`, {}, { headers });
+                return this.http.post<any>(`${this.apiUrl}/guide/${guideId}/replan`, { missed_reason: missedReason }, { headers });
             })
         );
     }

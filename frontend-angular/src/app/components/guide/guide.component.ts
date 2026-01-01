@@ -224,12 +224,19 @@ export class GuideComponent implements OnInit {
     }
 
     async replan() {
-        if (!confirm('This will regenerate future tasks based on your progress. Continue?')) return;
+        if (!confirm('This will regenerate future tasks. Continue?')) return;
+        const reason = prompt('Why are you replanning? (Optional: e.g., "I missed yesterday due to illness")', '') || '';
+
         this.replanning = true;
         try {
-            const newSchedule = await this.apiService.replanSchedule(this.guideId).toPromise();
-            if (this.guide && newSchedule) {
-                this.guide.study_schedule = newSchedule;
+            const res = await this.apiService.replanSchedule(this.guideId, reason).toPromise();
+            if (this.guide && res) {
+                this.guide.study_schedule = res.study_schedule || res;
+                this.guide.plan_explanation = res.plan_explanation;
+
+                if (this.guide.plan_explanation) {
+                    alert('AI Agent says: \n' + this.guide.plan_explanation);
+                }
             }
         } catch (e: any) {
             alert('Replanning failed: ' + (e.error?.error || e.message));

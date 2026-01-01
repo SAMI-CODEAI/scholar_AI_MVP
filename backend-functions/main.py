@@ -214,21 +214,30 @@ def prompt_everything(prompt, goals=""):
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     final_prompt = (
-        f"You are an expert study assistant. The user's specific goal is: '{goals}'. "
-        "I need you to generate a study guide based on the transcript provided below. "
-        "Return the output as a SINGLE VALID JSON object with the following structure:\n"
+        f"You are an expert, proactive study planner. The user's specific goal is: '{goals}'. "
+        "Analyze the transcript and generate a comprehensive study system. "
+        "1. **Tag Topics by Difficulty**: Identify key topics and rate them (Easy/Medium/Hard). "
+        "2. **Spaced Repetition**: Insert specific 'Revision' slots in the schedule for hard topics to ensure retention. "
+        "3. **Feasibility**: Ensure daily study time is realistic (30-60 mins max per session). "
+        "4. **Personalization**: Provide specific study tips for this material. "
+        "Return a SINGLE VALID JSON object with this EXACT structure:\n"
         "{\n"
-        "  \"title\": \"A short, catchy title\",\n"
-        "  \"summary\": \"A detailed summary with markdown formatting (bolding key points)\",\n"
-        "  \"flash_cards\": [[\"Question 1\", \"Answer 1\"], [\"Question 2\", \"Answer 2\"], ...], (10 cards)\n"
+        "  \"title\": \"Catchy Title\",\n"
+        "  \"summary\": \"Detailed summary...\",\n"
+        "  \"topics\": [\n"
+        "     {\"name\": \"Topic A\", \"difficulty\": \"Hard\"},\n"
+        "     {\"name\": \"Topic B\", \"difficulty\": \"Medium\"}\n"
+        "  ],\n"
+        "  \"study_tips\": [\"Tip 1\", \"Tip 2 using mnemonic...\"],\n"
+        "  \"flash_cards\": [[\"Q1\", \"A1\"], ...], (10 cards)\n"
         "  \"quiz\": [\n"
-        "    {\"question\": \"Q1\", \"possible_answers\": [\"A\",\"B\",\"C\",\"D\"], \"index\": 0},\n"
+        "    {\"question\": \"Q1\", \"possible_answers\": [\"A\",\"B\",\"C\",\"D\"], \"index\": 0, \"related_topic\": \"Topic A\"},\n"
         "    ... (10 questions)\n"
         "  ],\n"
         "  \"study_schedule\": [\n"
-        "     {\"day_offset\": 1, \"title\": \"Review Summary\", \"details\": \"Read through the generated summary to grasp core concepts.\", \"duration_minutes\": 30},\n"
-        "     {\"day_offset\": 2, \"title\": \"Flashcard Session\", \"details\": \"Test your knowledge with the flashcards.\", \"duration_minutes\": 20},\n"
-        "     {\"day_offset\": 3, \"title\": \"Take Quiz\", \"details\": \"Final assessment using the generated quiz.\", \"duration_minutes\": 15}\n"
+        "     {\"day_offset\": 1, \"title\": \"Study: Topic A\", \"details\": \"Deep dive...\", \"duration_minutes\": 45, \"type\": \"learning\", \"difficulty\": \"Hard\"},\n"
+        "     {\"day_offset\": 2, \"title\": \"Revision: Topic A\", \"details\": \"Quick review to reinforce memory.\", \"duration_minutes\": 15, \"type\": \"revision\", \"difficulty\": \"Hard\"},\n"
+        "     {\"day_offset\": 3, \"title\": \"Quiz & Assessment\", \"details\": \"Final check.\", \"duration_minutes\": 20, \"type\": \"quiz\", \"difficulty\": \"Medium\"}\n"
         "  ]\n"
         "}\n\n"
         "Transcript:\n" + prompt
@@ -546,6 +555,9 @@ def update_progress(guide_id):
 def replan_schedule(guide_id):
     try:
         configure_genai(request)
+        data = request.json or {}
+        missed_reason = data.get('missed_reason', 'Not specified')
+
         file_path = os.path.join(DB_PATH, f'{guide_id}.json')
         with open(file_path, 'r') as f:
             guide_data = json.load(f)
@@ -557,23 +569,23 @@ def replan_schedule(guide_id):
             f"The user has specific study goals: {guide_data.get('goals', 'General mastery')}. "
             "They have NOT completed the following sessions from their previous plan: "
             f"{json.dumps(remaining_tasks)}. "
-            "Please generate a NEW, updated study schedule (list of objects with day_offset, title, details, duration_minutes) "
-            "that helps them catch up and master the material. "
-            "Return JSON: {\"study_schedule\": [...] }"
+            f"Reason for missing tasks: '{missed_reason}'. "
+            "Please generate a NEW, updated study schedule that helps them catch up. "
+            "1. Explain WHY you changed the plan based on their reason (e.g., if busy, make sessions shorter). "
+            "2. Adapt the schedule (insert revisions, adjust duration). "
+            "Return JSON: {\"study_schedule\": [{\"day_offset\": 1, \"title\": \"...\", \"details\": \"...\", \"duration_minutes\": 30, \"type\": \"learning\"}], \"plan_explanation\": \"...\" }"
         )
         
         response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
         new_plan = json.loads(response.text)
         
-        # Merge or Replace? Let's replace the REMAINING tasks with new ones, keeping completed ones? 
-        # Simpler: Replace the whole schedule with valid history? 
-        # Agentic approach: The AI gives the FULL new plan.
         guide_data['study_schedule'] = new_plan['study_schedule']
+        guide_data['plan_explanation'] = new_plan.get('plan_explanation', 'Plan updated based on your progress.')
         
         with open(file_path, 'w') as f:
             json.dump(guide_data, f)
             
-        return jsonify(guide_data['study_schedule']), 200
+        return jsonify({"study_schedule": guide_data['study_schedule'], "plan_explanation": guide_data['plan_explanation']}), 200
     except Exception as e:
         logger.error(f"Replan failed: {e}")
         return jsonify({"error": str(e)}), 500

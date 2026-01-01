@@ -774,6 +774,60 @@
     }
 }
 
+// Advanced Study Features
+.study-tips-box {
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.2);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    animation: fadeIn 0.5s ease;
+
+    h4 {
+        color: #d8b4fe;
+        margin-bottom: 0.75rem;
+        font-size: 1.1rem;
+    }
+
+    ul {
+        padding-left: 1.5rem;
+        color: rgba(255, 255, 255, 0.85);
+
+        li {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+    }
+}
+
+.difficulty-tag {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    margin-left: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    &.hard {
+        background: rgba(239, 68, 68, 0.25);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    &.medium {
+        background: rgba(234, 179, 8, 0.25);
+        color: #fde047;
+        border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    &.easy {
+        background: rgba(34, 197, 94, 0.25);
+        color: #86efac;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+}
+
 // Responsive
 @media (max-width: 768px) {
     .navbar {

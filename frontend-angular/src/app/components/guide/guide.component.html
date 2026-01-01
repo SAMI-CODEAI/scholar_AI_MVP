@@ -256,6 +256,17 @@
                         </div>
                     </div>
 
+                    @if (guide.study_tips && guide.study_tips.length > 0) {
+                    <div class="study-tips-box">
+                        <h4>💡 Personalized Tips</h4>
+                        <ul>
+                            @for (tip of guide.study_tips; track $index) {
+                            <li>{{ tip }}</li>
+                            }
+                        </ul>
+                    </div>
+                    }
+
                     @if (motivationParams) {
                     <div class="motivation-toast">
                         Running AI Agent... 💬 "{{ motivationParams }}"
@@ -280,6 +291,10 @@
                                         <input type="checkbox" [checked]="session.completed"
                                             (change)="toggleTask($index, $event)" class="task-checkbox">
                                         <h3>Day {{ session.day_offset }}: {{ session.title }}</h3>
+                                        @if (session.difficulty) {
+                                        <span class="difficulty-tag" [class]="session.difficulty.toLowerCase()">{{
+                                            session.difficulty }}</span>
+                                        }
                                     </div>
                                     <span class="duration">⏱️ {{ session.duration_minutes }} min</span>
                                 </div>
