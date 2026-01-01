@@ -88,6 +88,13 @@
 
             @if (selectedFile && !isUploading) {
             <div class="api-key-section">
+                <label for="goals">Study Goals / Instructions (Optional)</label>
+                <textarea id="goals" [(ngModel)]="goals"
+                    placeholder="e.g., I have a Biology exam on Friday covering cell mitigation. Focus on that."
+                    class="text-input" rows="3"></textarea>
+            </div>
+
+            <div class="api-key-section">
                 <label for="apiKey">Gemini API Key (Optional)</label>
                 <input type="password" id="apiKey" [(ngModel)]="apiKey" placeholder="Paste your Gemini API Key here"
                     class="api-key-input">

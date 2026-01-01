@@ -29,6 +29,7 @@ export interface StudyGuide {
         title: string;
         details: string;
         duration_minutes: number;
+        completed?: boolean;
     }[];
     created_at: number;
     filename?: string;
@@ -63,11 +64,14 @@ export class ApiService {
         return this.http.get(`${this.apiUrl}/health`);
     }
 
-    uploadFile(file: File, apiKey?: string): Observable<UploadResponse> {
+    uploadFile(file: File, apiKey?: string, goals?: string): Observable<UploadResponse> {
         return this.getAuthHeaders().pipe(
             switchMap(authHeaders => {
                 const formData = new FormData();
                 formData.append('file', file);
+                if (goals) {
+                    formData.append('goals', goals);
+                }
 
                 let headers = authHeaders;
                 if (apiKey) {
@@ -105,5 +109,29 @@ export class ApiService {
 
     getExportUrl(type: 'quiz' | 'flashcards' | 'summary', guideId: string): string {
         return `${this.apiUrl}/export/${type}/${guideId}`;
+    }
+
+    updateProgress(guideId: string, index: number, completed: boolean): Observable<any> {
+        return this.getAuthHeaders().pipe(
+            switchMap(headers => {
+                return this.http.put(`${this.apiUrl}/guide/${guideId}/progress`, { index, completed }, { headers });
+            })
+        );
+    }
+
+    getMotivation(completedCount: number, totalCount: number): Observable<{ message: string }> {
+        return this.getAuthHeaders().pipe(
+            switchMap(headers => {
+                return this.http.post<{ message: string }>(`${this.apiUrl}/motivation`, { completed_count: completedCount, total_count: totalCount }, { headers });
+            })
+        );
+    }
+
+    replanSchedule(guideId: string): Observable<any[]> {
+        return this.getAuthHeaders().pipe(
+            switchMap(headers => {
+                return this.http.post<any[]>(`${this.apiUrl}/guide/${guideId}/replan`, {}, { headers });
+            })
+        );
     }
 }

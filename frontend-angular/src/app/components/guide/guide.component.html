@@ -244,9 +244,23 @@
                 @if (activeTab === 'schedule') {
                 <div class="schedule-section">
                     <div class="section-header">
-                        <h2>Smart Study Schedule</h2>
-                        <p class="subtitle">AI-generated plan to master this material.</p>
+                        <div>
+                            <h2>Smart Study Schedule</h2>
+                            <p class="subtitle">AI-generated plan to master this material.</p>
+                        </div>
+                        <div class="schedule-actions">
+                            <button class="btn-secondary" (click)="getMotivation()">💪 Boost Me</button>
+                            <button class="btn-secondary" (click)="replan()" [disabled]="replanning">
+                                {{ replanning ? 'Thinking...' : '🔄 Agent Autoplan' }}
+                            </button>
+                        </div>
                     </div>
+
+                    @if (motivationParams) {
+                    <div class="motivation-toast">
+                        Running AI Agent... 💬 "{{ motivationParams }}"
+                    </div>
+                    }
 
                     @if (!guide.study_schedule || guide.study_schedule.length === 0) {
                     <div class="empty-state">
@@ -256,11 +270,17 @@
                     } @else {
                     <div class="timeline">
                         @for (session of guide.study_schedule; track $index) {
-                        <div class="timeline-item">
-                            <div class="timeline-marker">{{ session.day_offset }}</div>
+                        <div class="timeline-item" [class.completed-item]="session.completed">
+                            <div class="timeline-marker">
+                                @if(session.completed) { ✓ } @else { {{ session.day_offset }} }
+                            </div>
                             <div class="timeline-content">
                                 <div class="session-header">
-                                    <h3>Day {{ session.day_offset }}: {{ session.title }}</h3>
+                                    <div class="header-left">
+                                        <input type="checkbox" [checked]="session.completed"
+                                            (change)="toggleTask($index, $event)" class="task-checkbox">
+                                        <h3>Day {{ session.day_offset }}: {{ session.title }}</h3>
+                                    </div>
                                     <span class="duration">⏱️ {{ session.duration_minutes }} min</span>
                                 </div>
                                 <p>{{ session.details }}</p>

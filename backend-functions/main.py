@@ -195,12 +195,13 @@ def get_audio_transcript(file_path):
 # GEMINI PROMPTS (Updated to gemini-1.5-flash)
 # ============================================================================
 
-def prompt_everything(prompt):
+def prompt_everything(prompt, goals=""):
     """Generate EVERYTHING in a single Gemini call to save time (crucial for Vercel timeout)"""
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     final_prompt = (
-        "You are an expert study assistant. I need you to generate a study guide based on the transcript provided below. "
+        f"You are an expert study assistant. The user's specific goal is: '{goals}'. "
+        "I need you to generate a study guide based on the transcript provided below. "
         "Return the output as a SINGLE VALID JSON object with the following structure:\n"
         "{\n"
         "  \"title\": \"A short, catchy title\",\n"
@@ -332,7 +333,8 @@ def handle_upload():
             return jsonify({"error": "Could not extract text from file"}), 400
 
         # 2. Generate Content
-        study_guide = prompt_everything(transcript)
+        goals = request.form.get('goals', '')
+        study_guide = prompt_everything(transcript, goals)
         
         # 3. Store Result
         guide_id = str(int(time.time())) # Simple ID gen
@@ -340,6 +342,7 @@ def handle_upload():
         study_guide['created_at'] = int(time.time())
         study_guide['filename'] = filename
         study_guide['user_id'] = user_id
+        study_guide['goals'] = goals
         
         # Save to local JSON "DB"
         with open(os.path.join(DB_PATH, f'{guide_id}.json'), 'w') as f:
@@ -494,6 +497,86 @@ def export_summary(guide_id):
                 as_attachment=True,
                 download_name=f'summary_{guide_id}.docx'
             )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/guide/<guide_id>/progress', methods=['PUT'])
+def update_progress(guide_id):
+    try:
+        data = request.json
+        session_index = data.get('index')
+        completed = data.get('completed')
+        
+        file_path = os.path.join(DB_PATH, f'{guide_id}.json')
+        if not os.path.exists(file_path):
+            return jsonify({"error": "Guide not found"}), 404
+            
+        with open(file_path, 'r') as f:
+            guide_data = json.load(f)
+            
+        if 'study_schedule' in guide_data and 0 <= session_index < len(guide_data['study_schedule']):
+            guide_data['study_schedule'][session_index]['completed'] = completed
+            
+            with open(file_path, 'w') as f:
+                json.dump(guide_data, f)
+                
+            return jsonify({"success": True, "schedule": guide_data['study_schedule']}), 200
+        return jsonify({"error": "Invalid session index"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/guide/<guide_id>/replan', methods=['POST'])
+def replan_schedule(guide_id):
+    try:
+        configure_genai(request)
+        file_path = os.path.join(DB_PATH, f'{guide_id}.json')
+        with open(file_path, 'r') as f:
+            guide_data = json.load(f)
+            
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        remaining_tasks = [s for s in guide_data.get('study_schedule', []) if not s.get('completed')]
+        
+        prompt = (
+            f"The user has specific study goals: {guide_data.get('goals', 'General mastery')}. "
+            "They have NOT completed the following sessions from their previous plan: "
+            f"{json.dumps(remaining_tasks)}. "
+            "Please generate a NEW, updated study schedule (list of objects with day_offset, title, details, duration_minutes) "
+            "that helps them catch up and master the material. "
+            "Return JSON: {\"study_schedule\": [...] }"
+        )
+        
+        response = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        new_plan = json.loads(response.text)
+        
+        # Merge or Replace? Let's replace the REMAINING tasks with new ones, keeping completed ones? 
+        # Simpler: Replace the whole schedule with valid history? 
+        # Agentic approach: The AI gives the FULL new plan.
+        guide_data['study_schedule'] = new_plan['study_schedule']
+        
+        with open(file_path, 'w') as f:
+            json.dump(guide_data, f)
+            
+        return jsonify(guide_data['study_schedule']), 200
+    except Exception as e:
+        logger.error(f"Replan failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/motivation', methods=['POST'])
+def get_motivation():
+    try:
+        configure_genai(request)
+        data = request.json
+        completed_count = data.get('completed_count', 0)
+        total_count = data.get('total_count', 0)
+        
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        prompt = (
+            f"User has completed {completed_count} out of {total_count} study sessions. "
+            "Give them a short, punchy, 1-sentence motivational quote or nudge to keep going. "
+            "Don't be generic. Be witty if possible."
+        )
+        response = model.generate_content(prompt)
+        return jsonify({"message": response.text.strip()}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

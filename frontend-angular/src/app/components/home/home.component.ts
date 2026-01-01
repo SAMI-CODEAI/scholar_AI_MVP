@@ -27,6 +27,7 @@ export class HomeComponent {
     uploadError = '';
     selectedFile: File | null = null;
     apiKey = ''; // User provided API Key
+    goals = '';
 
     recentGuides: GuideListItem[] = [];
     loadingGuides = false;
@@ -112,7 +113,7 @@ export class HomeComponent {
         }, 500);
 
         try {
-            const response = await this.apiService.uploadFile(this.selectedFile, this.apiKey).toPromise();
+            const response = await this.apiService.uploadFile(this.selectedFile, this.apiKey, this.goals).toPromise();
             clearInterval(progressInterval);
             this.uploadProgress = 100;
 

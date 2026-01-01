@@ -194,6 +194,50 @@ export class GuideComponent implements OnInit {
         window.open(url, '_blank');
     }
 
+    replanning = false;
+    motivationParams: string | null = null;
+
+    async toggleTask(index: number, event: any) {
+        const completed = event.target.checked;
+        if (!this.guide || !this.guide.study_schedule) return;
+        this.guide.study_schedule[index].completed = completed;
+
+        try {
+            await this.apiService.updateProgress(this.guideId, index, completed).toPromise();
+        } catch (e) {
+            console.error('Failed to update progress', e);
+        }
+    }
+
+    async getMotivation() {
+        if (!this.guide || !this.guide.study_schedule) return;
+        const completed = this.guide.study_schedule.filter((s: any) => s.completed).length;
+        const total = this.guide.study_schedule.length;
+
+        try {
+            const res = await this.apiService.getMotivation(completed, total).toPromise();
+            this.motivationParams = res?.message || 'Keep going!';
+            setTimeout(() => this.motivationParams = null, 8000);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async replan() {
+        if (!confirm('This will regenerate future tasks based on your progress. Continue?')) return;
+        this.replanning = true;
+        try {
+            const newSchedule = await this.apiService.replanSchedule(this.guideId).toPromise();
+            if (this.guide && newSchedule) {
+                this.guide.study_schedule = newSchedule;
+            }
+        } catch (e: any) {
+            alert('Replanning failed: ' + (e.error?.error || e.message));
+        } finally {
+            this.replanning = false;
+        }
+    }
+
     async signOut() {
         await this.authService.signOut();
         this.router.navigate(['/login']);
