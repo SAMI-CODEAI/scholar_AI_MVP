@@ -12,12 +12,17 @@ const { v4: uuidv4 } = require('uuid');
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin
-if (!admin.apps.length) {
-    admin.initializeApp({
-        projectId: "medkey-vault"
-    });
+let db;
+try {
+    if (!admin.apps.length) {
+        admin.initializeApp({
+            projectId: "medkey-vault"
+        });
+    }
+    db = admin.firestore();
+} catch (e) {
+    console.error("Firebase Initialization Error:", e);
 }
-const db = admin.firestore();
 const GUIDES_COLLECTION = 'study_guides';
 
 // Load environment variables
@@ -179,6 +184,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         guideData.user_id = req.body.user_id || "anonymous";
 
         // Save to Firestore
+        if (!db) throw new Error("Database not initialized. Check server logs.");
         await db.collection(GUIDES_COLLECTION).doc(guideId).set(guideData);
 
         res.json(guideData);
@@ -191,6 +197,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 app.get('/api/guides', async (req, res) => {
     try {
+        if (!db) throw new Error("Database not initialized");
         const userId = req.query.user_id;
         let query = db.collection(GUIDES_COLLECTION);
 
@@ -220,6 +227,7 @@ app.get('/api/guides', async (req, res) => {
 
 app.get('/api/guide/:id', async (req, res) => {
     try {
+        if (!db) throw new Error("Database not initialized");
         const doc = await db.collection(GUIDES_COLLECTION).doc(req.params.id).get();
         if (!doc.exists) return res.status(404).json({ error: "Guide not found" });
         res.json(doc.data());
@@ -230,6 +238,7 @@ app.get('/api/guide/:id', async (req, res) => {
 
 app.put('/api/guide/:id/progress', async (req, res) => {
     try {
+        if (!db) throw new Error("Database not initialized");
         const { index, completed } = req.body;
         const docRef = db.collection(GUIDES_COLLECTION).doc(req.params.id);
         const doc = await docRef.get();
@@ -273,6 +282,7 @@ app.post('/api/motivation', async (req, res) => {
 
 app.post('/api/guide/:id/replan', async (req, res) => {
     try {
+        if (!db) throw new Error("Database not initialized");
         const { missed_reason } = req.body;
         const docRef = db.collection(GUIDES_COLLECTION).doc(req.params.id);
         const doc = await docRef.get();
@@ -313,11 +323,18 @@ app.post('/api/guide/:id/replan', async (req, res) => {
 
 app.delete('/api/guide/:id', async (req, res) => {
     try {
+        if (!db) throw new Error("Database not initialized");
         await db.collection(GUIDES_COLLECTION).doc(req.params.id).delete();
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("Global Error:", err);
+    res.status(500).json({ error: "Internal Server Error: " + (err.message || "Unknown Error") });
 });
 
 // Start Server
