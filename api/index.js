@@ -95,7 +95,7 @@ async function extractTextFromFile(filePath, originalFilename, mimeType) {
 async function promptEverything(transcript, goals, difficulty, examDate, apiKey) {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash-lite",
+        model: "gemini-1.5-flash",
         generationConfig: { responseMimeType: "application/json" }
     });
 
@@ -139,12 +139,18 @@ async function promptEverything(transcript, goals, difficulty, examDate, apiKey)
         const response = await result.response;
         const text = response.text();
 
-        // Clean JSON markdown if present
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
+        if (!text) throw new Error("AI returned empty response");
+
+        try {
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (parseError) {
+            console.error("JSON Parse Error. Raw text:", text);
+            throw new Error("Failed to parse AI response as JSON");
+        }
     } catch (error) {
-        console.error("AI Generation Error Details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-        throw new Error("AI Generation Failed: " + (error.message || "Unknown error"));
+        console.error("AI Generation Error:", error);
+        throw error;
     }
 }
 

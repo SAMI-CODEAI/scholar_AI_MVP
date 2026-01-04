@@ -547,8 +547,19 @@
 
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                if (!res.ok) {
+                    const text = await res.text();
+                    let errMsg = "Server Error";
+                    try {
+                        const errData = JSON.parse(text);
+                        errMsg = errData.error || errMsg;
+                    } catch (e) {
+                        if (res.status === 504) errMsg = "Timeout: Study guide takes too long to generate. Try a simpler topic.";
+                        else errMsg = "Server crash (500). Check Vercel logs.";
+                    }
+                    throw new Error(errMsg);
+                }
                 const data = await res.json();
-                if (data.error) throw new Error(data.error);
                 guide = data;
                 renderGuide();
             } catch (e) {
@@ -664,10 +675,16 @@
 
         async function loadGuide(id) {
             document.getElementById('loader').style.display = 'flex';
-            const res = await fetch(`/api/guide/${id}`);
-            guide = await res.json();
-            document.getElementById('loader').style.display = 'none';
-            renderGuide();
+            try {
+                const res = await fetch(`/api/guide/${id}`);
+                if (!res.ok) throw new Error("Failed to load guide");
+                guide = await res.json();
+                renderGuide();
+            } catch (e) {
+                alert(e.message);
+            } finally {
+                document.getElementById('loader').style.display = 'none';
+            }
         }
     </script>
 </body>
