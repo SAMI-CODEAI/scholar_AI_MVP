@@ -9,6 +9,16 @@ const path = require('path');
 const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
 const { v4: uuidv4 } = require('uuid');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+    admin.initializeApp({
+        projectId: "medkey-vault"
+    });
+}
+const db = admin.firestore();
+const GUIDES_COLLECTION = 'study_guides';
 
 // Load environment variables
 dotenv.config();
@@ -26,13 +36,6 @@ if (!fsRegular.existsSync(UPLOAD_DIR)) {
     fsRegular.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 const upload = multer({ dest: UPLOAD_DIR });
-
-// Database Directory
-// NOTE: Vercel has a read-only filesystem. For production, consider using Firestore or MongoDB.
-const DATABASE_DIR = process.env.VERCEL ? '/tmp/database' : (process.env.DATABASE_DIR || 'database');
-if (!fsRegular.existsSync(DATABASE_DIR)) {
-    fsRegular.mkdirSync(DATABASE_DIR, { recursive: true });
-}
 
 // Gemini Configuration
 const HARDCODED_GEMINI_KEY = "AIzaSyApLxKHefoVZKTzUy8qOttT4rSO81xtxa0";
@@ -168,72 +171,75 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         const guideData = await promptEverything(transcript, goals, difficulty, examDate, apiKey);
 
         // Add Metadata
-        const guideId = Date.now().toString(); // Consistent with Python ID gen
+        const guideId = uuidv4();
         guideData.id = guideId;
         guideData.created_at = Date.now();
         guideData.filename = req.file.originalname;
         guideData.goals = goals;
+        guideData.user_id = req.body.user_id || "anonymous";
 
-        // Save to DB
-        await fs.writeFile(path.join(DATABASE_DIR, `${guideId}.json`), JSON.stringify(guideData, null, 2));
+        // Save to Firestore
+        await db.collection(GUIDES_COLLECTION).doc(guideId).set(guideData);
 
         res.json(guideData);
 
     } catch (error) {
-        console.error("Upload Error Full Object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error("Upload Error:", error);
         res.status(500).json({ error: error.message || "Internal Server Error" });
     }
 });
 
 app.get('/api/guides', async (req, res) => {
     try {
-        const files = await fs.readdir(DATABASE_DIR);
-        const guides = [];
+        const userId = req.query.user_id;
+        let query = db.collection(GUIDES_COLLECTION);
 
-        for (const file of files) {
-            if (file.endsWith('.json')) {
-                const content = await fs.readFile(path.join(DATABASE_DIR, file), 'utf8');
-                const data = JSON.parse(content);
-                // Minimal data for list
-                guides.push({
-                    id: data.id,
-                    title: data.title,
-                    filename: data.filename,
-                    created_at: data.created_at
-                });
-            }
+        if (userId) {
+            query = query.where('user_id', '==', userId);
         }
 
-        // Sort newest first
-        guides.sort((a, b) => b.created_at - a.created_at);
+        const snapshot = await query.orderBy('created_at', 'desc').get();
+        const guides = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            guides.push({
+                id: data.id,
+                title: data.title,
+                filename: data.filename,
+                created_at: data.created_at
+            });
+        });
 
         res.json({ guides });
     } catch (error) {
+        console.error("List Guides Error:", error);
         res.status(500).json({ error: error.message });
     }
 });
 
 app.get('/api/guide/:id', async (req, res) => {
     try {
-        const filePath = path.join(DATABASE_DIR, `${req.params.id}.json`);
-        const content = await fs.readFile(filePath, 'utf8');
-        res.json(JSON.parse(content));
+        const doc = await db.collection(GUIDES_COLLECTION).doc(req.params.id).get();
+        if (!doc.exists) return res.status(404).json({ error: "Guide not found" });
+        res.json(doc.data());
     } catch (error) {
-        res.status(404).json({ error: "Guide not found" });
+        res.status(500).json({ error: error.message });
     }
 });
 
 app.put('/api/guide/:id/progress', async (req, res) => {
     try {
         const { index, completed } = req.body;
-        const filePath = path.join(DATABASE_DIR, `${req.params.id}.json`);
+        const docRef = db.collection(GUIDES_COLLECTION).doc(req.params.id);
+        const doc = await docRef.get();
 
-        const content = await fs.readFile(filePath, 'utf8');
-        const data = JSON.parse(content);
+        if (!doc.exists) return res.status(404).json({ error: "Guide not found" });
 
+        const data = doc.data();
         if (data.study_schedule && data.study_schedule[index]) {
             data.study_schedule[index].completed = completed;
-            await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+            await docRef.update({ study_schedule: data.study_schedule });
             res.json({ success: true });
         } else {
             res.status(400).json({ error: "Task not found" });
@@ -268,10 +274,11 @@ app.post('/api/motivation', async (req, res) => {
 app.post('/api/guide/:id/replan', async (req, res) => {
     try {
         const { missed_reason } = req.body;
-        const filePath = path.join(DATABASE_DIR, `${req.params.id}.json`);
+        const docRef = db.collection(GUIDES_COLLECTION).doc(req.params.id);
+        const doc = await docRef.get();
 
-        const content = await fs.readFile(filePath, 'utf8');
-        const guideData = JSON.parse(content);
+        if (!doc.exists) return res.status(404).json({ error: "Guide not found" });
+        const guideData = doc.data();
         const apiKey = getGeminiKey(req);
 
         // Filter remaining tasks
@@ -281,16 +288,9 @@ app.post('/api/guide/:id/replan', async (req, res) => {
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
         const prompt = `
-            You are an expert study planner. 
-            The user has ${guideData.study_schedule.length} total tasks, and has ${remainingTasks.length} remaining.
-            Their current remaining schedule is: ${JSON.stringify(remainingTasks)}.
-            Reason for missing tasks: '${missed_reason}'.
-            
-            Please generate a NEW, updated study schedule that helps them catch up.
-            1. Explain WHY you changed the plan based on their reason (e.g., if busy, make sessions shorter).
-            2. Adapt the schedule (insert revisions, adjust duration).
-            
-            Return JSON: {"study_schedule": [{"day_offset": 1, "title": "...", "details": "...", "duration_minutes": 30, "type": "learning", "difficulty": "Hard"}], "plan_explanation": "..." }
+            Expert study planner. User missed tasks for reason: '${missed_reason}'.
+            Remaining: ${JSON.stringify(remainingTasks)}.
+            Generate updated schedule. Return JSON: {"study_schedule": [...], "plan_explanation": "..." }
         `;
 
         const result = await model.generateContent(prompt);
@@ -298,11 +298,11 @@ app.post('/api/guide/:id/replan', async (req, res) => {
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         const newPlan = JSON.parse(jsonStr);
 
-        // Update Guide
-        guideData.study_schedule = newPlan.study_schedule;
-        guideData.plan_explanation = newPlan.plan_explanation;
-
-        await fs.writeFile(filePath, JSON.stringify(guideData, null, 2));
+        // Update Doc
+        await docRef.update({
+            study_schedule: newPlan.study_schedule,
+            plan_explanation: newPlan.plan_explanation
+        });
 
         res.json(newPlan);
     } catch (error) {
@@ -313,8 +313,7 @@ app.post('/api/guide/:id/replan', async (req, res) => {
 
 app.delete('/api/guide/:id', async (req, res) => {
     try {
-        const filePath = path.join(DATABASE_DIR, `${req.params.id}.json`);
-        await fs.unlink(filePath);
+        await db.collection(GUIDES_COLLECTION).doc(req.params.id).delete();
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -640,22 +640,27 @@
         }
 
         // Init Recent
-        (async () => {
-            const res = await fetch('/api/guides');
-            const data = await res.json();
-            if (data.guides && data.guides.length) {
-                document.getElementById('recent-list').innerHTML = '<h2 style="margin-bottom: 1.5rem;">Recent Guides</h2>' +
-                    data.guides.map(g => `
-                        <div class="card" style="padding: 1.5rem; margin-bottom: 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadGuide('${g.id}')">
-                            <div>
-                                <b style="font-size: 1.2rem;">${g.title}</b><br>
-                                <span style="font-size: 0.9rem; color: var(--text-dim)">${g.filename}</span>
+        async function initRecent() {
+            if (!currentUser) return;
+            try {
+                const res = await fetch(`/api/guides?user_id=${currentUser.uid}`);
+                const data = await res.json();
+                if (data.guides && data.guides.length) {
+                    document.getElementById('recent-list').innerHTML = '<h2 style="margin-bottom: 2rem;">Recent Study Guides</h2>' +
+                        data.guides.map(g => `
+                            <div class="card" style="padding: 1.5rem; margin-bottom: 1rem; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" onclick="loadGuide('${g.id}')">
+                                <div>
+                                    <b style="font-size: 1.2rem;">${g.title}</b><br>
+                                    <span style="font-size: 0.9rem; color: var(--text-dim)">${g.filename}</span>
+                                </div>
+                                <span style="color:var(--primary); font-size: 1.5rem;">→</span>
                             </div>
-                            <span style="color:var(--primary); font-size: 1.5rem;">→</span>
-                        </div>
-                    `).join('');
+                        `).join('');
+                }
+            } catch (e) {
+                console.error("Recent Load Error", e);
             }
-        })();
+        }
 
         async function loadGuide(id) {
             document.getElementById('loader').style.display = 'flex';
