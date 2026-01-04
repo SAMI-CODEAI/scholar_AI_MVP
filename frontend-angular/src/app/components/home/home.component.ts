@@ -29,6 +29,15 @@ export class HomeComponent {
     apiKey = ''; // User provided API Key
     goals = '';
 
+    // Advanced Planning
+    examSchedule: { topic: string, date: string }[] = [];
+    topicDifficulties: { topic: string, difficulty: 'Easy' | 'Medium' | 'Hard' }[] = [];
+
+    newExamTopic = '';
+    newExamDate = '';
+    newTopicName = '';
+    newTopicDifficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium';
+
     recentGuides: GuideListItem[] = [];
     loadingGuides = false;
 
@@ -36,6 +45,29 @@ export class HomeComponent {
 
     ngOnInit() {
         this.loadRecentGuides();
+    }
+
+    addExam() {
+        if (this.newExamTopic && this.newExamDate) {
+            this.examSchedule.push({ topic: this.newExamTopic, date: this.newExamDate });
+            this.newExamTopic = '';
+            this.newExamDate = '';
+        }
+    }
+
+    removeExam(index: number) {
+        this.examSchedule.splice(index, 1);
+    }
+
+    addTopicDifficulty() {
+        if (this.newTopicName) {
+            this.topicDifficulties.push({ topic: this.newTopicName, difficulty: this.newTopicDifficulty });
+            this.newTopicName = '';
+        }
+    }
+
+    removeTopicDifficulty(index: number) {
+        this.topicDifficulties.splice(index, 1);
     }
 
     async loadRecentGuides() {
@@ -105,30 +137,28 @@ export class HomeComponent {
         this.uploadError = '';
         this.uploadProgress = 0;
 
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            if (this.uploadProgress < 90) {
-                this.uploadProgress += Math.random() * 10;
+        // Convert list to dict for backend
+        const difficultyMap = this.topicDifficulties.reduce((acc, curr) => {
+            acc[curr.topic] = curr.difficulty;
+            return acc;
+        }, {} as any);
+
+        this.apiService.uploadFile(
+            this.selectedFile,
+            this.apiKey,
+            this.goals,
+            this.examSchedule,
+            difficultyMap
+        ).subscribe({
+            next: (response) => {
+                this.uploadProgress = 100;
+                this.router.navigate(['/guide', response.id]);
+            },
+            error: (err) => {
+                this.isUploading = false;
+                this.uploadError = err.error?.error || 'Upload failed. Please try again.';
             }
-        }, 500);
-
-        try {
-            const response = await this.apiService.uploadFile(this.selectedFile, this.apiKey, this.goals).toPromise();
-            clearInterval(progressInterval);
-            this.uploadProgress = 100;
-
-            // Navigate to the guide page
-            setTimeout(() => {
-                if (response?.id) {
-                    this.router.navigate(['/guide', response.id]);
-                }
-            }, 500);
-        } catch (err: any) {
-            clearInterval(progressInterval);
-            this.uploadError = err.error?.error || 'Upload failed. Please try again.';
-            this.isUploading = false;
-            this.uploadProgress = 0;
-        }
+        });
     }
 
     async signOut() {

@@ -71,13 +71,25 @@ export class ApiService {
         return this.http.get(`${this.apiUrl}/health`);
     }
 
-    uploadFile(file: File, apiKey?: string, goals?: string): Observable<UploadResponse> {
+    uploadFile(
+        file: File,
+        apiKey?: string,
+        goals?: string,
+        examSchedule?: any[],
+        topicDifficulties?: any
+    ): Observable<UploadResponse> {
         return this.getAuthHeaders().pipe(
             switchMap(authHeaders => {
                 const formData = new FormData();
                 formData.append('file', file);
                 if (goals) {
                     formData.append('goals', goals);
+                }
+                if (examSchedule) {
+                    formData.append('exam_schedule', JSON.stringify(examSchedule));
+                }
+                if (topicDifficulties) {
+                    formData.append('topic_difficulties', JSON.stringify(topicDifficulties));
                 }
 
                 let headers = authHeaders;
