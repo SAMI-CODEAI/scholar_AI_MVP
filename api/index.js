@@ -15,9 +15,19 @@ const admin = require('firebase-admin');
 let db;
 try {
     if (!admin.apps.length) {
-        admin.initializeApp({
-            projectId: "medkey-vault"
-        });
+        const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+        if (serviceAccountVar) {
+            // If the JSON is provided as a string in env
+            const serviceAccount = JSON.parse(serviceAccountVar);
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount)
+            });
+        } else {
+            // Fallback for local development or ambient credentials
+            admin.initializeApp({
+                projectId: "medkey-vault"
+            });
+        }
     }
     db = admin.firestore();
 } catch (e) {
