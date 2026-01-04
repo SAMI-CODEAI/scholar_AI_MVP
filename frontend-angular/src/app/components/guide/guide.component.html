@@ -245,8 +245,8 @@
                 <div class="schedule-section">
                     <div class="section-header">
                         <div>
-                            <h2>Smart Study Schedule</h2>
-                            <p class="subtitle">AI-generated plan to master this material.</p>
+                            <h2>Agentic Study System</h2>
+                            <p class="subtitle">Personalized progression tracking and smart replanning.</p>
                         </div>
                         <div class="schedule-actions">
                             <button class="btn-secondary" (click)="getMotivation()">💪 Boost Me</button>
@@ -256,9 +256,35 @@
                         </div>
                     </div>
 
+                    <!-- Progress Stats -->
+                    <div class="progress-stats-card">
+                        <div class="stats-header">
+                            <span class="stats-label">Course Progress</span>
+                            <span class="stats-value">{{ getCompletedCount() }} / {{ getTotalTasks() }} Tasks
+                                Done</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" [style.width.%]="getScheduleProgress()"></div>
+                        </div>
+                        <div class="stats-footer">
+                            <span class="progress-percent">{{ getScheduleProgress() }}% Complete</span>
+                            <label class="filter-toggle">
+                                <input type="checkbox" [(ngModel)]="showOnlyRemaining">
+                                Show only remaining
+                            </label>
+                        </div>
+                    </div>
+
+                    @if (guide.plan_explanation) {
+                    <div class="plan-explanation-box">
+                        <div class="agent-avatar">🤖 AI Agent</div>
+                        <p class="explanation-text">"{{ guide.plan_explanation }}"</p>
+                    </div>
+                    }
+
                     @if (guide.study_tips && guide.study_tips.length > 0) {
                     <div class="study-tips-box">
-                        <h4>💡 Personalized Tips</h4>
+                        <h4>💡 Personalized Study Tips</h4>
                         <ul>
                             @for (tip of guide.study_tips; track $index) {
                             <li>{{ tip }}</li>
@@ -281,6 +307,7 @@
                     } @else {
                     <div class="timeline">
                         @for (session of guide.study_schedule; track $index) {
+                        @if (!showOnlyRemaining || !session.completed) {
                         <div class="timeline-item" [class.completed-item]="session.completed">
                             <div class="timeline-marker">
                                 @if(session.completed) { ✓ } @else { {{ session.day_offset }} }
@@ -304,6 +331,7 @@
                                 </button>
                             </div>
                         </div>
+                        }
                         }
                     </div>
                     }

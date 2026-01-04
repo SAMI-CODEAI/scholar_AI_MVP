@@ -27,6 +27,7 @@ from docx.shared import RGBColor, Pt
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 import pypdf
+from datetime import datetime
 from mutagen.mp3 import MP3
 from mutagen.wave import WAVE
 from mutagen.mp4 import MP4

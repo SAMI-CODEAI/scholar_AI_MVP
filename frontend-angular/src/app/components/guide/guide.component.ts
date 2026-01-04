@@ -195,7 +195,22 @@ export class GuideComponent implements OnInit {
     }
 
     replanning = false;
+    showOnlyRemaining = false;
     motivationParams: string | null = null;
+
+    getScheduleProgress(): number {
+        if (!this.guide || !this.guide.study_schedule || this.guide.study_schedule.length === 0) return 0;
+        const completed = this.guide.study_schedule.filter((s: any) => s.completed).length;
+        return Math.round((completed / this.guide.study_schedule.length) * 100);
+    }
+
+    getCompletedCount(): number {
+        return this.guide?.study_schedule?.filter((s: any) => s.completed).length || 0;
+    }
+
+    getTotalTasks(): number {
+        return this.guide?.study_schedule?.length || 0;
+    }
 
     async toggleTask(index: number, event: any) {
         const completed = event.target.checked;
