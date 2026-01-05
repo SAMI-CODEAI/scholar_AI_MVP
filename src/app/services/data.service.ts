@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, from, map, of } from 'rxjs';
+import { Observable, from, map, of, switchMap } from 'rxjs';
 import { Firestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, query, where } from '@angular/fire/firestore';
 import { AuthService } from './auth.service';
 
@@ -68,22 +68,18 @@ export class DataService {
     }
 
     deleteGuide(id: string): Observable<boolean> {
-        const guideDoc = doc(this.firestore, this.COLLECTION, id);
-        return from(deleteDoc(guideDoc)).pipe(map(() => true));
+        return this.http.post<any>('/api/deleteGuide', { id }).pipe(map(() => true));
     }
 
     updateProgress(id: string, index: number, completed: boolean): Observable<any> {
-        // Firestore update specific field in array is hard without reading whole array.
-        // Easiest way: Get guide, update array, save back. 
-        // OR if we model schedule as subcollection... but let's stick to single document for simplicity (less quota usage).
-
         return this.getGuide(id).pipe(
-            map(guide => {
+            switchMap(guide => {
                 if (guide && guide.study_schedule && guide.study_schedule[index]) {
                     guide.study_schedule[index].completed = completed;
-                    const guideDoc = doc(this.firestore, this.COLLECTION, id);
-                    updateDoc(guideDoc, { study_schedule: guide.study_schedule });
-                    return { success: true };
+                    return this.http.post('/api/updateGuide', {
+                        id,
+                        updates: { study_schedule: guide.study_schedule }
+                    });
                 }
                 throw new Error('Task not found');
             })
@@ -91,10 +87,12 @@ export class DataService {
     }
 
     updateSchedule(id: string, newSchedule: any[], explanation: string): Observable<any> {
-        const guideDoc = doc(this.firestore, this.COLLECTION, id);
-        return from(updateDoc(guideDoc, {
-            study_schedule: newSchedule,
-            plan_explanation: explanation
-        })).pipe(map(() => ({ success: true })));
+        return this.http.post('/api/updateGuide', {
+            id,
+            updates: {
+                study_schedule: newSchedule,
+                plan_explanation: explanation
+            }
+        }).pipe(map(() => ({ success: true })));
     }
 }
