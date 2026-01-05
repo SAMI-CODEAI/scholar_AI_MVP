@@ -30,9 +30,11 @@ export class ApiService {
         return of({ status: 'ok', backend: 'angular-client-only' });
     }
 
-    uploadFile(file: File, apiKey: string, goals: string, difficulty: string, examDate: string, modelName: string): Observable<UploadResponse> {
-        // Save API key for future requests (motivation/replan)
-        localStorage.setItem('gemini_api_key', apiKey);
+    uploadFile(file: File, apiKey: string | undefined, goals: string, difficulty: string, examDate: string, modelName: string): Observable<UploadResponse> {
+        // Save API key if provided for future requests (motivation/replan)
+        if (apiKey) {
+            localStorage.setItem('gemini_api_key', apiKey);
+        }
 
         return from(this.fileService.extractText(file)).pipe(
             switchMap(transcript => {
@@ -97,8 +99,7 @@ export class ApiService {
     }
 
     getMotivation(completedCount: number, totalCount: number): Observable<{ message: string }> {
-        const apiKey = localStorage.getItem('gemini_api_key');
-        if (!apiKey) return of({ message: "Keep going! (Add API Key to get AI motivation)" });
+        const apiKey = localStorage.getItem('gemini_api_key') || undefined;
 
         return from(this.geminiService.getMotivation(completedCount, totalCount, apiKey)).pipe(
             map(message => ({ message }))
@@ -106,8 +107,7 @@ export class ApiService {
     }
 
     replanSchedule(guideId: string, missedReason: string = ''): Observable<any> {
-        const apiKey = localStorage.getItem('gemini_api_key');
-        if (!apiKey) return throwError(() => new Error("API Key required for replanning"));
+        const apiKey = localStorage.getItem('gemini_api_key') || undefined;
 
         return this.getGuide(guideId).pipe(
             switchMap(guide => {

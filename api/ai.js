@@ -1,0 +1,108 @@
+
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+export default async function handler(req, res) {
+    // CORS
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
+
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    const { action, customApiKey, modelName } = req.body;
+    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+        return res.status(400).json({ error: 'No API key provided. Please configure GEMINI_API_KEY on Vercel.' });
+    }
+
+    try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: modelName || "gemini-3.0-flash",
+            generationConfig: action === 'motivation' ? {} : { responseMimeType: "application/json" }
+        });
+
+        let prompt = "";
+
+        if (action === 'generate') {
+            const { transcript, goals, difficulty, examDate } = req.body;
+            prompt = `
+        You are an expert academic tutor. Generate a comprehensive study guide based on this transcript:
+        "${transcript.substring(0, 20000)}"
+
+        Context:
+        - Student Goals: ${goals}
+        - Difficulty Level: ${difficulty}
+        - Target Exam Date: ${examDate || 'Not specified'}
+
+        Return a JSON object with:
+        {
+          "title": "Clear Chapter/Topic Title",
+          "summary": "Detailed markdown summary",
+          "flash_cards": [ {"front": "question", "back": "answer"}, ... ],
+          "quiz": [ {"question": "...", "possible_answers": ["...", "..."], "index": 0}, ... ],
+          "study_tips": ["tip 1", "tip 2"],
+          "topics": [ {"name": "Topic A", "difficulty": "Easy/Medium/Hard"} ],
+          "study_schedule": [
+             {"day_offset": 1, "title": "...", "details": "...", "duration_minutes": 30, "difficulty": "..."}
+          ]
+        }
+      `;
+        } else if (action === 'motivation') {
+            const { completedCount, totalCount } = req.body;
+            prompt = `
+        User has completed ${completedCount} out of ${totalCount} study sessions.
+        Give them a short, punchy, 1-sentence motivational quote or nudge to keep going.
+        Don't be generic. Be witty if possible.
+      `;
+        } else if (action === 'replan') {
+            const { guideData, missedReason } = req.body;
+            const remainingTasks = (guideData.study_schedule || []).filter((task) => !task.completed);
+            prompt = `
+        You are an expert study planner. 
+        The user has ${guideData.study_schedule.length} total tasks, and has ${remainingTasks.length} remaining.
+        Their current remaining schedule is: ${JSON.stringify(remainingTasks)}.
+        Reason for missing tasks: '${missedReason}'.
+        
+        Please generate a NEW, updated study schedule that helps them catch up.
+        1. Explain WHY you changed the plan based on their reason.
+        2. Adapt the schedule.
+        
+        Return JSON: {"study_schedule": [...], "plan_explanation": "..." }
+      `;
+        } else {
+            return res.status(400).json({ error: 'Invalid action' });
+        }
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        if (action === 'motivation') {
+            return res.status(200).json({ message: text.trim() });
+        }
+
+        try {
+            const jsonData = JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
+            return res.status(200).json(jsonData);
+        } catch (e) {
+            return res.status(500).json({ error: "AI response was not valid JSON", raw: text });
+        }
+
+    } catch (error) {
+        console.error('AI Error:', error);
+        return res.status(500).json({ error: 'AI Operation Failed', details: error.message });
+    }
+}

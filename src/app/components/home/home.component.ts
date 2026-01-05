@@ -47,6 +47,8 @@ export class HomeComponent {
 
     ngOnInit() {
         this.loadRecentGuides();
+        // Load existing API key if present
+        this.apiKey = localStorage.getItem('gemini_api_key') || '';
     }
 
     async loadRecentGuides() {
@@ -112,11 +114,8 @@ export class HomeComponent {
     async uploadFile() {
         if (!this.selectedFile) return;
 
-        // Validate API key
-        if (!this.apiKey || this.apiKey.trim() === '') {
-            this.uploadError = 'Please provide your Gemini API key. Get one free at https://aistudio.google.com/app/apikey';
-            return;
-        }
+        const customKey = this.apiKey?.trim() || undefined;
+
 
         this.isUploading = true;
         this.uploadError = '';
@@ -130,7 +129,7 @@ export class HomeComponent {
         }, 500);
 
         try {
-            const response = await this.apiService.uploadFile(this.selectedFile, this.apiKey, this.goals, this.difficulty, this.examDate, this.selectedModel).toPromise();
+            const response = await this.apiService.uploadFile(this.selectedFile, customKey, this.goals, this.difficulty, this.examDate, this.selectedModel).toPromise();
             clearInterval(progressInterval);
             this.uploadProgress = 100;
 

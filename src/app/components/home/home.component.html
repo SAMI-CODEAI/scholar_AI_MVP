@@ -120,11 +120,11 @@
             </div>
 
             <div class="api-key-section">
-                <label for="apiKey">🔑 Gemini API Key <span class="required">*Required</span></label>
-                <input type="password" id="apiKey" [(ngModel)]="apiKey" placeholder="Paste your Gemini API Key here"
-                    class="api-key-input" required>
-                <p class="api-info">Get your free API key at <a href="https://aistudio.google.com/app/apikey"
-                        target="_blank">Google AI Studio</a></p>
+                <label for="apiKey">🔑 Custom API Key <span class="optional">(Optional)</span></label>
+                <input type="password" id="apiKey" [(ngModel)]="apiKey"
+                    placeholder="Leave blank to use default (may have limits)" class="api-key-input">
+                <p class="api-info">Use your own key for higher limits. Get a free key at <a
+                        href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a></p>
             </div>
 
             <button class="btn-primary btn-upload" (click)="uploadFile()">
