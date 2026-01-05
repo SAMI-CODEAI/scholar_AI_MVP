@@ -10,7 +10,7 @@ export class GeminiService {
 
     constructor() { }
 
-    async generateStudyGuide(transcript: string, goals: string, difficulty: string, examDate: string, customApiKey?: string, modelName: string = "gemini-2.5-flash-lite"): Promise<any> {
+    async generateStudyGuide(transcript: string, goals: string, difficulty: string, examDate: string, customApiKey?: string, modelName: string = "gemini-3.0-flash"): Promise<any> {
         return firstValueFrom(this.http.post<any>('/api/ai', {
             action: 'generate',
             transcript,
