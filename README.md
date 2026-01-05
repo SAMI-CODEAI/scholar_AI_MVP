@@ -34,7 +34,8 @@ This project is configured for Vercel.
 1.  Push to GitHub.
 2.  Import project in Vercel.
 3.  Framework Preset: **Angular**.
-4.  Deploy!
+4.  **Output Directory**: Set this to `dist/frontend-angular/browser`. (Important!)
+5.  Deploy!
 
 ## 🔑 Setup
 
