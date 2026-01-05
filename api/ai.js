@@ -21,10 +21,14 @@ export default async function handler(req, res) {
     }
 
     const { action, customApiKey, modelName } = req.body;
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    const apiKey = (customApiKey && customApiKey.trim().length > 0) ? customApiKey : process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-        return res.status(400).json({ error: 'No API key provided. Please configure GEMINI_API_KEY on Vercel.' });
+    if (!apiKey || apiKey.trim().length === 0) {
+        return res.status(400).json({
+            error: 'No API key provided.',
+            troubleshoot: 'Either provide a Custom API Key in the UI, or set GEMINI_API_KEY in Vercel Environment Variables and REDEPLOY.',
+            envDetected: !!process.env.GEMINI_API_KEY
+        });
     }
 
     try {
