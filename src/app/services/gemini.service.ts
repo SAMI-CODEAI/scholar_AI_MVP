@@ -8,7 +8,7 @@ export class GeminiService {
 
     constructor() { }
 
-    async generateStudyGuide(transcript: string, goals: string, difficulty: string, examDate: string, apiKey: string, modelName: string = "gemini-1.5-flash-001"): Promise<any> {
+    async generateStudyGuide(transcript: string, goals: string, difficulty: string, examDate: string, apiKey: string, modelName: string = "gemini-3.0-flash"): Promise<any> {
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
             model: modelName,
@@ -54,7 +54,7 @@ export class GeminiService {
 
     async getMotivation(completedCount: number, totalCount: number, apiKey: string): Promise<string> {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash" });
 
         const prompt = `
           User has completed ${completedCount} out of ${totalCount} study sessions.
@@ -68,7 +68,7 @@ export class GeminiService {
 
     async replanSchedule(guideData: any, missedReason: string, apiKey: string): Promise<any> {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001", generationConfig: { responseMimeType: "application/json" } });
+        const model = genAI.getGenerativeModel({ model: "gemini-3.0-flash", generationConfig: { responseMimeType: "application/json" } });
 
         const remainingTasks = (guideData.study_schedule || []).filter((task: any) => !task.completed);
 

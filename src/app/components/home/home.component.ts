@@ -37,12 +37,13 @@ export class HomeComponent {
     readonly supportedFormats = ['MP4', 'MP3', 'PDF', 'DOCX', 'TXT', 'HTML', 'MD'];
 
     availableModels = [
-        { id: 'gemini-1.5-flash-001', name: 'Gemini 1.5 Flash (Recommended)' },
-        { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B (Fastest)' },
-        { id: 'gemini-1.5-pro-001', name: 'Gemini 1.5 Pro (Smarter, Slower)' },
-        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Experimental)' }
+        { id: 'gemini-3.0-flash', name: 'Gemini 3.0 Flash (Fastest)' },
+        { id: 'gemini-3.0-pro', name: 'Gemini 3.0 Pro (Best Quality)' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Balanced)' },
+        { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Lightweight)' },
+        { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' }
     ];
-    selectedModel = 'gemini-1.5-flash-001';
+    selectedModel = 'gemini-3.0-flash';
 
     ngOnInit() {
         this.loadRecentGuides();
